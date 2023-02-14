@@ -1,2 +1,2 @@
-# Minesweeper-rs
-Simple minesweeper console game, written in Rust 💣
+# minesweeper-rs
+A simple console game, written in Rust 💣
