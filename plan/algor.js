@@ -1,3 +1,5 @@
+//This file is just for testing the algorithm
+
 let ref_table = [
     [0,0,0,0,0,0,0,0,0,0,0,-1,0,-1,0,0,],
     [0,0,0,0,0,0,-1,0,0,-1,0,0,-1,0,0,0,],
