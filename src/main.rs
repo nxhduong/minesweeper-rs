@@ -1,8 +1,13 @@
 use rand::Rng;
-use std::fs::File;
-use std::io::prelude::*;
 use std::process::Command;
 use crossterm::event::{read, Event, KeyCode, KeyEvent};
+
+enum Diff {
+    Easy,
+    Med,
+    Hard,
+    Custom(i8)
+}
 
 fn clrscr() {
     print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
@@ -13,7 +18,7 @@ fn clrscr() {
     }
 }
 
-fn print_table(table: &[Vec<String>], table_size: usize, coor: [usize; 2], unopened_count: i16) {
+fn print_table(table: &[Vec<String>], table_size: usize, coor: [usize; 2], unopened_count: i16, reveal: bool) {
     clrscr();
 
     print!("\r^_^|");
@@ -30,10 +35,17 @@ fn print_table(table: &[Vec<String>], table_size: usize, coor: [usize; 2], unope
     for i in 0..table_size {
         print!("{:02} | ", i);
         for j in 0..table_size {
-            if i == coor[0] && j == coor[1] {
-                print!("[{}]", table[i][j]);
+            if (!reveal) {
+                if i == coor[0] && j == coor[1] {
+                    print!("[{}]", table[i][j]);
+                } else {
+                    print!(" {} ", table[i][j]);
+                }
             } else {
-                print!(" {} ", table[i][j]);
+                print!(" {} ", match ref_table[i][j] {
+                    0 | -2 => "_",
+                    -1 => "Q"
+                });
             }
         }
         println!();
@@ -57,19 +69,20 @@ fn set_difficulty(current: &mut i8, new: i8) {
     };
 
     clrscr();
-    println!("OO============================OO");
-    println!("|| **** MINESWEEPER v0.1 **** ||");
-    println!("|| -----------o00o----------- ||");
-    println!("||     VERSION 0.1. BY D.     ||");
-    println!("|| -------------------------- ||");
-    println!("||     ****DIFFICULTY****     ||");
-    println!("{}", difficulty);
-    println!("|| -------------------------- ||");
-    println!("|| [ENTER] Start / Open coor  ||"); 
-    println!("|| [^][v][<][>] Move cursor   ||");
-    println!("|| [F] Flag selected coor     ||");
-    println!("|| [Q] Quit game              ||");
-    println!("OO============================OO");
+    println!(" OO============================OO");
+    println!(" || **** MINESWEEPER v0.2 **** ||");
+    println!(" || -----------o00o----------- ||");
+    println!(" ||     VERSION 0.1. BY D.     ||");
+    println!(" || -------------------------- ||");
+    println!(" ||     ****DIFFICULTY****     ||");
+    println!(" {}", difficulty);
+    println!(" || -------------------------- ||");
+    println!(" || [ENTER] Start / Open cell  ||"); 
+    println!(" || [^][v][<][>] Move cursor   ||");
+    println!(" || [F] Flag selected cell     ||");
+    println!(" || [C] Custom mode            ||");
+    println!(" || [Q] Quit game              ||");
+    println!(" OO============================OO");
 }
 
 fn count_nearby_mines(table: &mut Vec<Vec<String>>, ref_table: &mut Vec<Vec<i8>>, coor: [i8; 2]) {
@@ -138,9 +151,12 @@ fn count_nearby_mines(table: &mut Vec<Vec<String>>, ref_table: &mut Vec<Vec<i8>>
 
 fn main() {
     let mut selected_difficulty: i8 = 1;
+    let mut table_size: [i8; 2] = [16, 2];
+    let mut mines_count: i16 = 40;
+
     set_difficulty(&mut selected_difficulty, 0);
 
-    loop {
+    'main_menu: loop {
         match read().unwrap() {
             Event::Key(KeyEvent {
                 code: KeyCode::Up,
@@ -151,6 +167,73 @@ fn main() {
                 code: KeyCode::Down,
                 ..
             }) => set_difficulty(&mut selected_difficulty, 1),
+
+            Event::Key(KeyEvent {
+                code: KeyCode::Char('c'),
+                ..
+            }) => {
+                'custom_mode: loop {
+                    match read().unwrap() {
+                        println!(" OO============================OO");
+                        println!(" || **** MINESWEEPER v0.2 **** ||");
+                        println!(" || -----------o00o----------- ||");
+                        println!(" ||     VERSION 0.1. BY D.     ||");
+                        println!(" || -------------------------- ||");
+                        println!(" ||     ***CUSTOM  MODE***     ||");
+                        println!(" || NUMBER OF ROW(S) (1-99): {:02}||", table_size[0]);
+                        println!(" || NUMBER OF COL(S) (1-99): {:02}||", table_size[1]);
+                        println!(" || NUM OF MINE(S) (1-ROW*COL):||");
+                        println!(" || |                     {:04}||", mines_count)
+                        println!(" || -------------------------- ||");
+                        println!(" || [ENTER] Start game /       ||");
+                        println!(" ||         Open selected cell ||") 
+                        println!(" || [^][v][<][>] Move cursor   ||");
+                        println!(" || [Q] Return & Discard all   ||");
+                        println!(" OO============================OO");
+
+                        Event::Key(KeyEvent {
+                            code: KeyCode::Up,
+                            ..
+                        }) => {
+                            //
+                        },
+            
+                        Event::Key(KeyEvent {
+                            code: KeyCode::Down,
+                            ..
+                        }) => {
+                            //
+                        },
+
+                        Event::Key(KeyEvent {
+                            code: KeyCode::Left,
+                            ..
+                        }) => {
+                            //
+                        },
+            
+                        Event::Key(KeyEvent {
+                            code: KeyCode::Right,
+                            ..
+                        }) => {
+                            //
+                        },
+
+                        Event::Key(KeyEvent {
+                            code: KeyCode::Char('q'),
+                            ..
+                        }) => break 'custom_mode,
+
+                        Event::Key(KeyEvent {
+                            code: KeyCode::Enter,
+                            ..
+                        }) => {
+                            selected_difficulty = 3;
+                            break 'main_menu;
+                        },
+                    }
+                }
+            },
 
             Event::Key(KeyEvent {
                 code: KeyCode::Char('q'),
@@ -166,26 +249,27 @@ fn main() {
         }
     }
     
-    let table_size = match selected_difficulty {
+    table_size = match selected_difficulty {
         0 => 9,
         1 => 16,
         2 => 25,
-        _ => 16
+        _ => table_size
     };
+    mines_count = match table_size {
+        9 => 10,
+        16 => 50,
+        25 => 100,
+        _ => mines_count
+    };
+
     let mut ref_table: Vec<Vec<i8>> = vec![vec![0; table_size]; table_size];
     let mut table: Vec<Vec<String>> = vec![vec![String::from("*"); table_size]; table_size];
     let mut first_click: bool = true;
     let mut coor: [usize; 2] = [0, 0];
     let mut unopened_count: i16 = 0;
-    let mines_count: i16 = match table_size {
-        9 => 10,
-        16 => 50,
-        25 => 100,
-        _ => 40
-    };
 
     'listen: loop {
-        print_table(&table, table_size, coor, unopened_count);
+        print_table(&table, table_size, coor, unopened_count, false);
         match read().unwrap() {
             Event::Key(KeyEvent {
                 code: KeyCode::Up,
@@ -257,13 +341,17 @@ fn main() {
                         ref_table[x][y] = -1;
                     }
 
+                    /* For debugging
+                    use std::fs::File;
+                    use std::io::prelude::*;
+
                     let mut table_str = String::from("[");
                     for i in 0..table_size {
                         table_str += "[";
                         for j in 0..table_size {
                             table_str += &format!("{},", ref_table[i][j]);
                         }
-                        table_str += "],";
+                        table_str += "],\n";
                     }
                     table_str += "]";
                     
@@ -275,12 +363,14 @@ fn main() {
                         },
                         Err(_e) => ()
                     };
+                    */
 
                     first_click = false;
                 }
 
                 if ref_table[coor[0]][coor[1]] == -1 {
                     println!("Game over! Press any key to try again");
+                    print_table(&table, table_size, coor, unopened_count, true);
                     break 'listen;
                 } else {
                     count_nearby_mines(&mut table, &mut ref_table, [coor[0] as i8, coor[1] as i8]);
